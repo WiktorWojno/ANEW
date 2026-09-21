@@ -179,7 +179,19 @@ def state(session_id: str):
     s = memory.get_session(session_id)
     if not s:
         return JSONResponse({"error": "no session"}, status_code=404)
-    return {"session": s, "history": memory.last_messages(session_id, 50)}
+    return {"session": s, "history": memory.last_messages(session_id, 50),
+            "track": memory.get_state(session_id)}
+
+
+@app.patch("/api/track")
+async def patch_track(req: Request):
+    """Manual tracker correction. Body: {session_id, location?, party?, injuries?, inventory?, threads?}."""
+    b = await req.json()
+    sid = b.get("session_id", "")
+    if not memory.get_session(sid):
+        return JSONResponse({"error": "no session"}, status_code=404)
+    memory.update_state(sid, **{k: b[k] for k in memory.STATE_FIELDS if k in b})
+    return {"ok": True, "track": memory.get_state(sid)}
 
 
 def build_messages(s, history, user_text):
@@ -202,7 +214,12 @@ def build_messages(s, history, user_text):
         "@@CHOICES@@\n1. <action, max 12 words>\n2. <action, max 12 words>\n"
         "3. <action, max 12 words>\n@@END@@\n"
         "Rules: exactly 3 options (4 only at life-or-death stakes). Option 1 must suit "
-        "PLAYER STYLE. Always include one lateral/clever option. Nothing after @@END@@. "
+        "PLAYER STYLE. Always include one lateral/clever option. "
+        "After @@END@@ append the tracker block (nothing else may follow it):\n"
+        "@@STATE@@\nlocation: <current place>\nparty: <allies present>\n"
+        "injuries: <none or list>\ninventory: <notable items>\n"
+        "threads: <open plot threads, comma separated>\n@@ENDSTATE@@\n"
+        "Rules: 5 short lines, 'none' if empty. "
         "FORBIDDEN: a prose 'Choices:'/'What do you do?' section or an 'Or what do you do?' line — "
         "choices live ONLY in the block. The UI renders **bold** and *italic*, so use them."
     )
@@ -227,6 +244,24 @@ async def do_summarize(sid):
         if summary.startswith("\n[LiteRouter error"):
             return ""
         memory.update_session(sid, summary=summary)
+        # Backfill tracker state via the free model (best effort, never fatal)
+        try:
+            state_prompt = [
+                {"role": "system", "content": (
+                    "Given this roleplay transcript, output ONLY a JSON object with keys "
+                    "location, party, injuries, inventory, threads (short strings, "
+                    "'none' if empty). No other text.")},
+                {"role": "user", "content": blob[-8000:]},
+            ]
+            raw_state = await chat_once(MODEL_CHEAP, state_prompt, max_tokens=250, temperature=0.2)
+            m = re.search(r"\{[\s\S]*\}", raw_state)
+            if m:
+                vals = {k: str(v)[:300] for k, v in json.loads(m.group(0)).items()
+                        if k in memory.STATE_FIELDS and v}
+                if vals:
+                    memory.update_state(sid, **vals)
+        except Exception:
+            pass
         return summary
     except Exception:
         return ""
@@ -241,6 +276,8 @@ async def maybe_summarize(sid):
 
 CHOICE_START = "@@CHOICES@@"
 CHOICE_END = "@@END@@"
+STATE_START = "@@STATE@@"
+STATE_END = "@@ENDSTATE@@"
 _CHOICE_LINE = re.compile(r"^\s*(?:\d{1,2}\s*[.)\-:]\s*|[-•*]\s+)(.+)$")
 _CHOICE_HEADING = re.compile(
     r"^\s*\*{0,3}\s*[\"'“”‘’]*\s*(?:choices|options|tactical options|what do you do)\b[^a-zA-Z0-9]*$",
@@ -254,6 +291,27 @@ def _clean_label(c):
     c = c.replace("**", "").replace("__", "").replace("*", "").replace("`", "")
     c = re.sub(r"\s+", " ", c).strip().strip("\"'“”‘’-–—")
     return c
+
+
+def extract_state(full):
+    """Split out the @@STATE@@ tracker block. Returns (text_without, values, raw)."""
+    if STATE_START not in full or STATE_END not in full:
+        return full, {}, ""
+    pre, rest = full.split(STATE_START, 1)
+    mid, post = rest.split(STATE_END, 1)
+    vals = {}
+    for line in mid.strip().split("\n"):
+        if ":" not in line:
+            continue
+        k, v = line.split(":", 1)
+        k = k.strip().lower()
+        if k in memory.STATE_FIELDS:
+            vals[k] = v.strip()[:300]
+    raw = STATE_START + mid + STATE_END
+    cleaned = pre.rstrip()
+    if post.strip():
+        cleaned += "\n" + post.strip()
+    return cleaned, vals, raw
 
 
 def extract_choices(full):
@@ -325,9 +383,13 @@ def _streamer(sid, msgs):
         full = "".join(buf)
         choices, raw = [], ""
         if full and not full.startswith("\n[LiteRouter error"):
-            cleaned, choices, raw = extract_choices(full)
+            no_state, vals, state_raw = extract_state(full)
+            if vals:
+                memory.update_state(sid, **vals)
+            cleaned, choices, ch_raw = extract_choices(no_state)
             memory.add_message(sid, "assistant", cleaned)
             await maybe_summarize(sid)
+            raw = (ch_raw + ("\n" + state_raw if state_raw else "")).strip()
         yield f"data: {json.dumps({'done': True, 'choices': choices, 'raw': raw})}\n\n"
 
     return StreamingResponse(gen(), media_type="text/event-stream")
@@ -336,12 +398,14 @@ def _streamer(sid, msgs):
 CONTINUE_NUDGE = (
     "Continue the scene from exactly where it stopped. Advance action, consequences and NPC "
     "reactions. Do not recap or repeat yourself. Keep 150-300 words. "
-    "End with the @@CHOICES@@ block (option 1 suits PLAYER STYLE, one lateral option)."
+    "End with the @@CHOICES@@ block (option 1 suits PLAYER STYLE, one lateral option), "
+    "then the @@STATE@@ block (location/party/injuries/inventory/threads, 'none' if empty)."
 )
 REGEN_NUDGE = (
     "Rewrite your last response with a fresh take: different beats and details, same continuity. "
     "Keep 150-300 words. End with the @@CHOICES@@ block "
-    "(option 1 suits PLAYER STYLE, one lateral option)."
+    "(option 1 suits PLAYER STYLE, one lateral option), "
+    "then the @@STATE@@ block (location/party/injuries/inventory/threads, 'none' if empty)."
 )
 
 

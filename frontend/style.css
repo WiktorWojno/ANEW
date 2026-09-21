@@ -97,6 +97,16 @@ button.ghost:hover{border-color:var(--amber)}
 #chatmeta .m-title{color:var(--ink);font-weight:700;letter-spacing:.06em}
 #chatmeta .chip{border:1px solid var(--line2);padding:1px 8px;letter-spacing:.1em;color:var(--teal)}
 #chatmeta .chip.amber{color:var(--amber2)}
+/* ---------- tracker strip ---------- */
+#tracker{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+#tracker:empty{display:none}
+.tk{font-family:var(--mono);font-size:11px;border:1px solid var(--line);background:#0f1319;
+  padding:6px 10px;cursor:pointer;letter-spacing:.04em;transition:border-color .2s;max-width:100%}
+.tk:hover{border-color:var(--teal)}
+.tk b{color:var(--teal);font-weight:700;letter-spacing:.18em;margin-right:8px}
+.tk i{font-style:normal;color:var(--ink)}
+.tk i.none{color:var(--dim)}
+.tk.wide{flex:1 1 100%}
 /* ---------- messages ---------- */
 #chat{display:flex;flex-direction:column;gap:12px;min-height:36vh;margin-bottom:14px}
 .msg{max-width:82%;padding:10px 14px;line-height:1.55;font-size:14px;position:relative;animation:rise .25s ease-out}

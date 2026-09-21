@@ -43,6 +43,16 @@ CREATE TABLE IF NOT EXISTS personas (
   created_at REAL,
   updated_at REAL
 );
+CREATE TABLE IF NOT EXISTS session_state (
+  session_id TEXT PRIMARY KEY,
+  location TEXT DEFAULT '',
+  party TEXT DEFAULT '',
+  injuries TEXT DEFAULT '',
+  inventory TEXT DEFAULT '',
+  threads TEXT DEFAULT '',
+  updated_at REAL,
+  FOREIGN KEY(session_id) REFERENCES sessions(id)
+);
 """
 
 
@@ -114,7 +124,42 @@ def list_sessions(limit=50):
 def delete_session(sid):
     with _conn() as c:
         c.execute("DELETE FROM messages WHERE session_id=?", (sid,))
+        c.execute("DELETE FROM session_state WHERE session_id=?", (sid,))
         c.execute("DELETE FROM sessions WHERE id=?", (sid,))
+
+
+# ---- tracker state ----
+
+STATE_FIELDS = ("location", "party", "injuries", "inventory", "threads")
+STATE_EMPTY = {k: "" for k in STATE_FIELDS}
+
+
+def get_state(sid):
+    init_db()
+    with _conn() as c:
+        r = c.execute("SELECT * FROM session_state WHERE session_id=?", (sid,)).fetchone()
+    if not r:
+        return dict(STATE_EMPTY)
+    return {k: (r[k] or "") for k in STATE_FIELDS}
+
+
+def update_state(sid, **fields):
+    vals = {k: str(fields[k]) for k in STATE_FIELDS if k in fields}
+    if not vals:
+        return
+    init_db()
+    with _conn() as c:
+        row = c.execute("SELECT session_id FROM session_state WHERE session_id=?", (sid,)).fetchone()
+        if row:
+            sets = ", ".join(f"{k}=?" for k in vals)
+            c.execute(f"UPDATE session_state SET {sets}, updated_at=? WHERE session_id=?",
+                      (*vals.values(), time.time(), sid))
+        else:
+            cols = ", ".join(vals)
+            qs = ", ".join("?" * len(vals))
+            c.execute(f"INSERT INTO session_state (session_id, {cols}, updated_at) VALUES (?, {qs}, ?)",
+                      (sid, *vals.values(), time.time()))
+        c.execute("UPDATE sessions SET updated_at=? WHERE id=?", (time.time(), sid))
 
 
 def update_session(sid, **fields):

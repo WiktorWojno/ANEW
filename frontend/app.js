@@ -246,6 +246,7 @@ async function sendUserText(text) {
   const res = await streamReply('/api/chat', {session_id: sid, text, persona_id: personaSel.value});
   busy = false; sendBtn.disabled = false; setTools(true);
   showChoices(res.choices);
+  refreshTrack();
   loadChats();
 }
 
@@ -352,7 +353,7 @@ function renderChats(filter = '') {
       }
       await fetch('/api/session?session_id=' + s.id, {method: 'DELETE'});
       toast('Deployment deleted.');
-      if (sid === s.id) { sid = null; chat.innerHTML = ''; meta.innerHTML = ''; setTools(false); }
+      if (sid === s.id) { sid = null; chat.innerHTML = ''; meta.innerHTML = ''; renderTrack({}); setTools(false); }
       await loadChats();
     };
     const tags = document.createElement('div');
@@ -394,6 +395,40 @@ function renderMeta(s) {
   }
 }
 
+const TRACK_KEYS = ['location', 'party', 'injuries', 'inventory', 'threads'];
+
+function renderTrack(track) {
+  track = track || {};
+  for (const el of document.querySelectorAll('#tracker .tk')) {
+    const v = (track[el.dataset.key] || '').trim() || '—';
+    const i = el.querySelector('i');
+    i.textContent = v;
+    i.classList.toggle('none', v === '—');
+  }
+}
+
+async function refreshTrack() {
+  if (!sid) return;
+  try {
+    const r = await fetch('/api/state?session_id=' + sid).then(r => r.json());
+    renderTrack(r.track);
+  } catch {}
+}
+
+for (const el of document.querySelectorAll('#tracker .tk')) {
+  el.onclick = async () => {
+    if (!sid) { toast('Open or deploy a chat first.'); return; }
+    const key = el.dataset.key;
+    const cur = el.querySelector('i').textContent;
+    const v = prompt(`Set ${key} (empty clears):`, cur === '—' ? '' : cur);
+    if (v === null) return;
+    const r = await fetch('/api/track', {method: 'PATCH', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: sid, [key]: v.trim()})});
+    if (r.ok) { renderTrack((await r.json()).track); toast('Tracker updated.'); }
+    else toast('Tracker update failed.');
+  };
+}
+
 async function openChat(id) {
   sid = id;
   setTools(true);
@@ -408,6 +443,7 @@ async function openChat(id) {
   document.getElementById('character').value = r.session.character || '';
   await loadPersonas(r.session.persona_id || '');
   renderMeta(r.session);
+  renderTrack(r.track);
   if (!r.history.length) add('Uplink established. Transmit your first action to begin the operation.', 'gm');
   let lastBubble = null;
   for (const m of r.history) lastBubble = add(m.content, m.role === 'user' ? 'user' : 'gm', m.id, m.created_at);
@@ -439,6 +475,7 @@ document.getElementById('newchat').onclick = () => {
   sid = null; setTools(false);
   suggestbar.innerHTML = '';
   lastChoices = [];
+  renderTrack({});
   chat.innerHTML = ''; meta.innerHTML = '';
   document.getElementById('title').value = '';
   document.body.classList.remove('deploy-collapsed');
@@ -501,6 +538,7 @@ document.getElementById('btnContinue').onclick = async () => {
   const res = await streamReply('/api/continue', {session_id: sid});
   busy = false; setTools(true);
   showChoices(res.choices);
+  refreshTrack();
   loadChats();
 };
 
@@ -513,6 +551,7 @@ document.getElementById('btnRegen').onclick = async () => {
   const res = await streamReply('/api/regenerate', {session_id: sid});
   busy = false; setTools(true);
   showChoices(res.choices);
+  refreshTrack();
   loadChats();
 };
 
