@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ANEW — Original Characters</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpolygon points='8,0 24,0 32,16 24,32 8,32 0,16' fill='%23f2a33c'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="mark">E</div>
+    <h1>ANEW<span>Original characters</span></h1>
+  </div>
+  <nav><a href="/">← Field link</a></nav>
+</header>
+<main class="page">
+  <p class="lede">Forge your original characters here. Anything saved appears in the Field Link dossier picker under <b>◈ Operative</b> mode and is injected into the GM uplink — Talos-II plays around them.</p>
+  <section id="editor">
+    <div class="panel-head">Character forge</div>
+    <div class="row">
+      <input id="f_name" placeholder="Codename *" />
+      <input id="f_race" placeholder="Race" list="dl_race" />
+      <input id="f_faction" placeholder="Faction" list="dl_faction" />
+    </div>
+    <div class="row">
+      <input id="f_role" placeholder="Role e.g. Z7 scout, AIC engineer" />
+      <input id="f_weapon" placeholder="Weapon e.g. greatsword" />
+    </div>
+    <span class="f" style="font-size:10px;letter-spacing:.22em;color:var(--muted)">Element</span>
+    <div class="elpills" id="elpills">
+      <label><input type="radio" name="el" value="" checked style="display:none" /><span class="pill">— none —</span></label>
+      <label><input type="radio" name="el" value="Physical" style="display:none" /><span class="pill">Physical</span></label>
+      <label><input type="radio" name="el" value="Heat" style="display:none" /><span class="pill">Heat</span></label>
+      <label><input type="radio" name="el" value="Cryo" style="display:none" /><span class="pill">Cryo</span></label>
+      <label><input type="radio" name="el" value="Electric" style="display:none" /><span class="pill">Electric</span></label>
+      <label><input type="radio" name="el" value="Nature" style="display:none" /><span class="pill">Nature</span></label>
+    </div>
+    <textarea id="f_appearance" placeholder="Appearance"></textarea>
+    <textarea id="f_personality" placeholder="Personality"></textarea>
+    <textarea id="f_backstory" placeholder="Backstory"></textarea>
+    <textarea id="f_voice" placeholder="Voice / speech style"></textarea>
+    <textarea id="f_notes" placeholder="Notes: strengths, flaws, goals"></textarea>
+    <div class="preview" id="preview"></div>
+    <div class="row" style="margin-top:10px">
+      <button id="save">File character</button>
+      <button id="clear" class="ghost">Clear</button>
+    </div>
+    <datalist id="dl_race">
+      <option value="Lupo"></option><option value="Feline"></option><option value="Libero"></option>
+      <option value="Elafia"></option><option value="Sankta"></option><option value="Sarkaz"></option>
+      <option value="Vouivre"></option><option value="Perro"></option>
+    </datalist>
+    <datalist id="dl_faction">
+      <option value="Endfield Industries"></option><option value="Rhodes Island"></option>
+      <option value="Hongshan Academy of Sciences"></option><option value="United Workers' Syndicate of Talos-II"></option>
+      <option value="Talos-II General Chamber of Commerce"></option><option value="Hannabit Circuit"></option>
+      <option value="Order of Steel Oath"></option><option value="Cabal of Tranquility"></option>
+      <option value="Seš'qa"></option>
+    </datalist>
+  </section>
+  <section id="cards" class="cards"></section>
+</main>
+<div id="toast"></div>
+<script src="/static/personas.js"></script>
+</body>
+</html>

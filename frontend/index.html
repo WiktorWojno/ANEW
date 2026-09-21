@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ANEW — Talos-II Field Link</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpolygon points='8,0 24,0 32,16 24,32 8,32 0,16' fill='%23f2a33c'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body data-mode="oc">
+<header>
+  <button id="sidebartoggle" class="ghost icon" title="toggle deployments">☰</button>
+  <div class="brand">
+    <div class="mark">E</div>
+    <h1>ANEW<span>Endfield // Field Link</span></h1>
+  </div>
+  <div id="models"><span class="dot"></span><span id="modelstext">linking…</span></div>
+  <nav><a href="/personas">◈ Characters</a></nav>
+</header>
+<div id="layout">
+  <aside id="sidebar">
+    <div class="side-label">Deployments</div>
+    <button id="newchat">+ New deployment</button>
+    <input id="search" placeholder="▸ filter deployments…" autocomplete="off" />
+    <div id="chatlist"></div>
+  </aside>
+  <main>
+    <section id="setup">
+      <button id="deploytoggle" class="panel-head">Deployment Config <span class="chev">▾</span></button>
+      <div id="deploybody"><div class="deploy-inner">
+      <div class="grid">
+        <div class="full"><label class="f" for="title">Operation title</label>
+          <input id="title" placeholder="e.g. Valley IV night patrol" /></div>
+        <div class="full"><span class="f">Command role</span>
+          <div class="dialrail" id="moderail">
+            <div class="dial-ink" id="dialink"></div>
+            <label class="dialopt"><input type="radio" name="mode" value="oc" checked /><span>◈ Operative</span></label>
+            <label class="dialopt"><input type="radio" name="mode" value="admin" /><span>⬢ Endmin</span></label>
+            <label class="dialopt"><input type="radio" name="mode" value="canon" /><span>⬣ Canon Op</span></label>
+          </div>
+          <div class="dialdesc" id="modedesc"></div>
+        </div>
+        <div class="full collapsible" id="dossierrow"><label class="f" for="persona">Original character — dossier</label>
+          <div class="rowline">
+            <select id="persona"><option value="">— none —</option></select>
+            <a class="mini" href="/personas">+ new dossier</a>
+          </div></div>
+        <div class="full collapsible" id="callsignrow"><label class="f" for="character">Callsign / quick label</label>
+          <input id="character" placeholder="e.g. Kai · Endministrator · Chen" /></div>
+        <div class="full"><span class="f">Signal tone</span>
+          <div class="seg" id="toneseg">
+            <label><input type="radio" name="tone" value="anime-heroic" checked style="display:none" /><span class="pill">anime-heroic</span></label>
+            <label><input type="radio" name="tone" value="gritty-survival" style="display:none" /><span class="pill">gritty-survival</span></label>
+            <label><input type="radio" name="tone" value="cozy-industrial" style="display:none" /><span class="pill">cozy-industrial</span></label>
+          </div></div>
+        <div class="full"><span class="f">Drop zone</span>
+          <div class="cards3" id="startercards">
+            <label class="pick"><input type="radio" name="starter" value="B" checked />
+              <span class="card-opt"><b>B · Valley IV Contract</b><small>Frontier production belt. AIC orientation fails, Aggeloi attack.</small></span></label>
+            <label class="pick"><input type="radio" name="starter" value="A" />
+              <span class="card-opt"><b>A · Cold Wake</b><small>Wake aboard OMV Dijiang. Perlica briefs. Valley IV alarm.</small></span></label>
+            <label class="pick"><input type="radio" name="starter" value="C" />
+              <span class="card-opt"><b>C · Snowy Loop</b><small>Supernatural Snowy Forest. Time-loop investigation.</small></span></label>
+          </div></div>
+        <div class="full"><button id="start">▶ Deploy</button></div>
+      </div>
+      </div></div>
+      <div class="hazard"></div>
+    </section>
+    <section id="chatmeta"></section>
+    <section id="chat"></section>
+    <div id="toolbar">
+      <button id="btnChoices" class="ghost tool on" title="Show/hide suggestion buttons">👁 Choices</button>
+      <button id="btnContinue" class="ghost tool" title="GM advances the scene">▸ Continue</button>
+      <button id="btnRegen" class="ghost tool" title="Rewrite the last GM reply">⟳ Regenerate</button>
+      <button id="btnUndo" class="ghost tool" title="Delete last turn (your message + GM reply)">↩ Undo turn</button>
+      <button id="btnSummary" class="ghost tool" title="Refresh the mission briefing">☰ Briefing</button>
+      <button id="btnExport" class="ghost tool" title="Download chat as markdown">⤓ Export</button>
+    </div>
+    <div id="suggestbar"></div>
+    <form id="form">
+      <input id="input" autocomplete="off" placeholder="Transmit action or dialogue…" />
+      <button id="send">Send</button>
+    </form>
+    <div class="hint" style="margin-top:6px">Enter ↵ to transmit · dossier switch applies instantly, no story turn burned</div>
+  </main>
+</div>
+<div id="splash" hidden>
+  <div class="splash-box">
+    <div class="splash-title">◆ Establishing uplink</div>
+    <div class="splash-bar"><div id="splashfill"></div></div>
+    <div class="splash-status" id="splashstatus">Handshake with OMV Dijiang…</div>
+  </div>
+</div>
+<div id="toast"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>
