@@ -23,5 +23,7 @@ G. Far North Expedition (endgame, any): ruins and Static Blight beyond the falle
 H. Orientation Day (any, slow): a working AIC orientation, dorm assignment, introductions around Valley IV. No alarm — people, work, first impressions. Let trouble arrive only if earned.
 I. Night Market (any, social): off-duty evening in a Jinlong trade row — stalls, gifts, rumors, bonding. Trouble only if the player goes looking.
 J. Quiet Watch (any, atmospheric): routine night shift over Depth readings and TP relays. Strange signals, still air. Dread without combat unless the player forces it.
+K. High Orbit Rest (any, chill): downtime aboard OMV Dijiang — observation deck, canteen, rec room, letters between outposts. Zero stakes; rest is the mission. Do NOT manufacture an incident; offer hooks only if the player goes looking.
+L. Valley Evening (any, chill): off-shift hours in Valley IV's civilian quarter — food, river air, off-duty banter, Terra-longing. Pure downtime. Do NOT manufacture an incident; offer hooks only if the player goes looking.
 
 Open with chosen starter if session is new. Otherwise continue from summary + last turns.

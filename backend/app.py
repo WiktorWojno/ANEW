@@ -88,6 +88,13 @@ STARTER_LORE = {
     # J: Quiet Watch — monitoring shift, Depth readings, slow dread
     "J": [("regions.md", "OMV Dijiang"), ("threats.md", "Blight"),
           ("technology.md", "Protocol-Originium and Tele-Protocol")],
+    # K: High Orbit Rest — station downtime, comforts, letters, the view
+    "K": [("regions.md", "OMV Dijiang"),
+          ("technology.md", "Protocol-Originium and Tele-Protocol"),
+          ("technology.md", "AIC — Automated Industry Complex")],
+    # L: Valley Evening — civilian quarter, food, banter, Terra-longing
+    "L": [("regions.md", "Valley IV"), ("regions.md", "Jinlong"),
+          ("technology.md", "Reconveners")],
 }
 FACTIONS_REF = _read(LORE_DIR / "factions.md")
 
@@ -116,6 +123,8 @@ STARTER_TEXT = {
     "H": "Orientation Day: a working AIC orientation, dorm assignment, and introductions around Valley IV. No alarm — just people, work, and first impressions. Slow burn.",
     "I": "Night Market: an off-duty evening in a Jinlong trade row — food stalls, small gifts, rumors, and bonding. Social start; trouble only if you go looking.",
     "J": "Quiet Watch: a routine night shift monitoring Depth readings and TP relays. Strange signals, still air, rising numbers. Atmospheric mystery, no combat promised.",
+    "K": "High Orbit Rest: downtime aboard OMV Dijiang — observation deck over the storms, canteen, rec room, letters between outposts. Zero stakes; rest is the mission.",
+    "L": "Valley Evening: off-shift hours in Valley IV's civilian quarter — food stalls, river air, off-duty banter, homesickness for a Terra nobody remembers. Pure downtime.",
 }
 
 app = FastAPI(title="ANEW Endfield RP")
