@@ -66,6 +66,18 @@ STARTER_LORE = {
     # C: Snowy Loop — forest investigation, Blight effects, Reconverer thread
     "C": [("regions.md", "Snowy Forest and Wuling"), ("threats.md", "Blight"),
           ("technology.md", "Reconveners")],
+    # D: Ankhorfall Ridge — fresh fall, SAC assessment, Arts-forward combat
+    "D": [("regions.md", "Valley IV"), ("threats.md", "Aggeloi"),
+          ("technology.md", "Originium and the Arts")],
+    # E: Jinlong Ledger — trade dispute, human scheming, protocol logistics
+    "E": [("regions.md", "Jinlong"), ("threats.md", "Human threats"),
+          ("technology.md", "Protocol-Originium and Tele-Protocol")],
+    # F: Wuling Samples — scholar escort, Blight edge, AIC field lab
+    "F": [("regions.md", "Snowy Forest and Wuling"), ("threats.md", "Blight"),
+          ("technology.md", "AIC — Automated Industry Complex")],
+    # G: Far North Expedition — frontier ruins, Static Blight, northern magnet
+    "G": [("regions.md", "Northern Frontier"), ("threats.md", "Blight"),
+          ("technology.md", "Reconveners")],
 }
 FACTIONS_REF = _read(LORE_DIR / "factions.md")
 
@@ -87,6 +99,10 @@ STARTER_TEXT = {
     "A": "Cold Wake: the player wakes in OMV Dijiang, Perlica briefs, Valley IV alarm sounds.",
     "B": "Valley IV Contract: the player arrives as a new hire, AIC orientation fails, Aggeloi attack.",
     "C": "Snowy Loop: investigation in the Snowy Forest time-loop with the Typhoeus/Purrchena thread.",
+    "D": "Ankhorfall Ridge: a fresh Ankhorfall on the Valley fringe. Z7 needs SAC assessment before it spreads. Combat-forward.",
+    "E": "Jinlong Ledger: a TGCC contract dispute chokes Valley supply lines. Avywenna's roads, deniable deals. Diplomacy-forward.",
+    "F": "Wuling Samples: escort HAS scholars sampling a fresh Blight edge. Science under hazard lights.",
+    "G": "Far North Expedition (endgame): ruins and Static Blight beyond the fallen frontier. For seasoned operatives; the Reactor magnet pulls north.",
 }
 
 app = FastAPI(title="ANEW Endfield RP")
