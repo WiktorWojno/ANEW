@@ -274,3 +274,28 @@ button.tool.on{color:var(--amber2);border-color:var(--amber)}
 .splash-bar div{height:100%;width:0;background:repeating-linear-gradient(-45deg,var(--amber) 0 10px,var(--amber2) 10px 20px);
   transition:width .3s}
 .splash-status{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:12px;min-height:16px}
+
+/* ---------- mobile fixes ---------- */
+body{min-height:100dvh}
+#layout{min-height:calc(100dvh - 55px)}
+header{padding-top:max(10px,env(safe-area-inset-top))}
+#lockbtn{margin-left:4px}
+@media (max-width:900px){
+  header{flex-wrap:wrap;gap:8px 10px;padding:max(8px,env(safe-area-inset-top)) 12px 8px}
+  .brand{flex:1;min-width:0}
+  nav{display:flex;gap:6px}
+  nav a{padding:9px 10px;font-size:11px;letter-spacing:.08em}
+  button.icon{min-height:40px;min-width:40px}
+  /* 16px stops iOS Safari from zooming the page whenever a field is focused */
+  select,input,textarea,#input{font-size:16px}
+  main{padding:12px 12px 24px}
+  .page{padding:12px 12px 32px}
+  #chatlist{max-height:160px}
+  #form{bottom:max(8px,env(safe-area-inset-bottom))}
+  #form .hint{display:none}
+  #toast{bottom:calc(20px + env(safe-area-inset-bottom))}
+}
+/* touch screens have no hover, so per-message actions must always be visible */
+@media (hover:none){
+  .msg .acts{opacity:1;position:static;justify-content:flex-end;margin-top:8px}
+}

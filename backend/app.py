@@ -148,6 +148,9 @@ COOKIE_NAME = "anew_key"
 _GATE_OPEN = ("/api/login", "/api/logout", "/api/config")
 
 
+NO_STORE = {"Cache-Control": "no-store"}
+
+
 @app.middleware("http")
 async def gate(request: Request, call_next):
     """Shared-secret gate. Set ANEW_PASSWORD to lock the whole site (Railway)."""
@@ -157,9 +160,15 @@ async def gate(request: Request, call_next):
             key = request.headers.get("x-anew-key", "") or request.cookies.get(COOKIE_NAME, "")
             if key != ANEW_PASSWORD:
                 if path.startswith("/api/") or path in ("/openapi.json", "/docs", "/redoc"):
-                    return JSONResponse({"error": "locked"}, status_code=401)
-                return FileResponse(str(ROOT / "frontend" / "lock.html"))
-    return await call_next(request)
+                    return JSONResponse({"error": "locked"}, status_code=401, headers=NO_STORE)
+                # no-store: browsers must never cache the lock page under /, /personas or
+                # /lore, or it keeps showing after a successful login.
+                return FileResponse(str(ROOT / "frontend" / "lock.html"), headers=NO_STORE)
+    resp = await call_next(request)
+    # Revalidate app pages and static assets so a redeploy reaches phones immediately.
+    if not request.url.path.startswith(("/api/", "/media/")):
+        resp.headers.setdefault("Cache-Control", "no-cache")
+    return resp
 
 
 @app.post("/api/login")
