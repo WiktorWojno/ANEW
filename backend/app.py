@@ -27,7 +27,61 @@ MODES = {
     "admin": _read(ROOT / "prompts" / "modes" / "admin.md"),
     "canon": _read(ROOT / "prompts" / "modes" / "canon.md"),
 }
-LORE = _read(ROOT / "lore" / "talos2.md")[:4000] + "\n" + _read(ROOT / "lore" / "factions.md")[:2000]
+LORE_DIR = ROOT / "lore"
+LORE_BUDGET = 6000  # chars per prompt; protects Standard premium credits
+
+
+def _section(filename, heading, max_chars=1500):
+    """Extract a '## heading' section from a lore file (tier labels included)."""
+    text = _read(LORE_DIR / filename)
+    if not text:
+        return ""
+    lines = text.split("\n")
+    start = None
+    for i, ln in enumerate(lines):
+        if ln.strip() == "## " + heading:
+            start = i
+            break
+    if start is None:
+        return ""
+    out = []
+    for ln in lines[start + 1:]:
+        if ln.startswith("## "):
+            break
+        out.append(ln)
+    return "\n".join(out).strip()[:max_chars]
+
+
+ALWAYS_LORE = [
+    ("timeline.md", "At a glance"),
+    ("operators.md", "Key figures (always injected)"),
+]
+STARTER_LORE = {
+    # A: Cold Wake — orbital HQ, valley alarm, protocol grid
+    "A": [("regions.md", "OMV Dijiang"), ("regions.md", "Valley IV"),
+          ("technology.md", "Protocol-Originium and Tele-Protocol")],
+    # B: Valley IV Contract — frontier production, Aggeloi raid, AIC kit
+    "B": [("regions.md", "Valley IV"), ("threats.md", "Aggeloi"),
+          ("technology.md", "AIC — Automated Industry Complex")],
+    # C: Snowy Loop — forest investigation, Blight effects, Reconverer thread
+    "C": [("regions.md", "Snowy Forest and Wuling"), ("threats.md", "Blight"),
+          ("technology.md", "Reconveners")],
+}
+FACTIONS_REF = _read(LORE_DIR / "factions.md")
+
+
+def lore_for(starter):
+    """Assemble the tier-labeled lore block for a deployment. See lore/canon-policy.md."""
+    parts = ["[Factions]\n" + FACTIONS_REF.strip()]
+    for filename, heading in ALWAYS_LORE:
+        sec = _section(filename, heading)
+        if sec:
+            parts.append(f"[{filename} — {heading}]\n{sec}")
+    for filename, heading in STARTER_LORE.get(starter, STARTER_LORE["B"]):
+        sec = _section(filename, heading)
+        if sec:
+            parts.append(f"[{filename} — {heading}]\n{sec}")
+    return "\n\n".join(parts)[:LORE_BUDGET]
 
 STARTER_TEXT = {
     "A": "Cold Wake: the player wakes in OMV Dijiang, Perlica briefs, Valley IV alarm sounds.",
@@ -51,7 +105,7 @@ def personas_page():
 
 @app.get("/api/config")
 def config():
-    return {"model_main": MODEL_MAIN, "model_cheap": MODEL_CHEAP, "build": "choices-v4"}
+    return {"model_main": MODEL_MAIN, "model_cheap": MODEL_CHEAP, "build": "lore-v5"}
 
 
 @app.post("/api/new-game")
@@ -139,7 +193,7 @@ def build_messages(s, history, user_text):
     style_txt = s.get("style") or memory.STYLE_UNKNOWN
     system = (
         f"{GM}\n\n--- MODE [{s.get('mode')}] ---\n{mode_txt}\n\n"
-        f"--- LORE ---\n{LORE}\n\nTone: {s.get('tone')}. "
+        f"--- LORE (tier-labeled canon; see lore/canon-policy.md) ---\n{lore_for(s.get('starter', 'B'))}\n\nTone: {s.get('tone')}. "
         f"Character: {s.get('character','')}. Starter: {starter}\n"
         f"{persona_txt}\n"
         f"--- PLAYER STYLE ---\n{style_txt}\n"
