@@ -20,5 +20,8 @@ D. Ankhorfall Ridge (any): fresh Ankhorfall on the Valley fringe; SAC assessment
 E. Jinlong Ledger (any): TGCC contract dispute chokes Valley supply lines; Avywenna's roads, deniable deals. Diplomacy-forward.
 F. Wuling Samples (any): escort HAS scholars sampling a fresh Blight edge. Science under hazard lights.
 G. Far North Expedition (endgame, any): ruins and Static Blight beyond the fallen frontier. For seasoned operatives only; the Reactor magnet pulls north.
+H. Orientation Day (any, slow): a working AIC orientation, dorm assignment, introductions around Valley IV. No alarm — people, work, first impressions. Let trouble arrive only if earned.
+I. Night Market (any, social): off-duty evening in a Jinlong trade row — stalls, gifts, rumors, bonding. Trouble only if the player goes looking.
+J. Quiet Watch (any, atmospheric): routine night shift over Depth readings and TP relays. Strange signals, still air. Dread without combat unless the player forces it.
 
 Open with chosen starter if session is new. Otherwise continue from summary + last turns.

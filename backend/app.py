@@ -78,6 +78,16 @@ STARTER_LORE = {
     # G: Far North Expedition — frontier ruins, Static Blight, northern magnet
     "G": [("regions.md", "Northern Frontier"), ("threats.md", "Blight"),
           ("technology.md", "Reconveners")],
+    # H: Orientation Day — civilian Valley life, working AIC, first meetings
+    "H": [("regions.md", "Valley IV"),
+          ("technology.md", "AIC — Automated Industry Complex"),
+          ("technology.md", "Protocol-Originium and Tele-Protocol")],
+    # I: Night Market — Jinlong trade rows, social webs, quiet schemes
+    "I": [("regions.md", "Jinlong"), ("threats.md", "Human threats"),
+          ("technology.md", "Protocol-Originium and Tele-Protocol")],
+    # J: Quiet Watch — monitoring shift, Depth readings, slow dread
+    "J": [("regions.md", "OMV Dijiang"), ("threats.md", "Blight"),
+          ("technology.md", "Protocol-Originium and Tele-Protocol")],
 }
 FACTIONS_REF = _read(LORE_DIR / "factions.md")
 
@@ -103,6 +113,9 @@ STARTER_TEXT = {
     "E": "Jinlong Ledger: a TGCC contract dispute chokes Valley supply lines. Avywenna's roads, deniable deals. Diplomacy-forward.",
     "F": "Wuling Samples: escort HAS scholars sampling a fresh Blight edge. Science under hazard lights.",
     "G": "Far North Expedition (endgame): ruins and Static Blight beyond the fallen frontier. For seasoned operatives; the Reactor magnet pulls north.",
+    "H": "Orientation Day: a working AIC orientation, dorm assignment, and introductions around Valley IV. No alarm — just people, work, and first impressions. Slow burn.",
+    "I": "Night Market: an off-duty evening in a Jinlong trade row — food stalls, small gifts, rumors, and bonding. Social start; trouble only if you go looking.",
+    "J": "Quiet Watch: a routine night shift monitoring Depth readings and TP relays. Strange signals, still air, rising numbers. Atmospheric mystery, no combat promised.",
 }
 
 app = FastAPI(title="ANEW Endfield RP")
