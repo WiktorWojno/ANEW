@@ -40,6 +40,9 @@ CREATE TABLE IF NOT EXISTS personas (
   backstory TEXT DEFAULT '',
   voice TEXT DEFAULT '',
   notes TEXT DEFAULT '',
+  fighting_style TEXT DEFAULT '',
+  signature_move TEXT DEFAULT '',
+  portrait_url TEXT DEFAULT '',
   created_at REAL,
   updated_at REAL
 );
@@ -72,6 +75,11 @@ def _migrate():
             c.execute("ALTER TABLE sessions ADD COLUMN persona_id TEXT DEFAULT ''")
         if "style" not in cols:
             c.execute("ALTER TABLE sessions ADD COLUMN style TEXT DEFAULT ''")
+    with _conn() as c:
+        pcols = [r["name"] for r in c.execute("PRAGMA table_info(personas)").fetchall()]
+        for col in ("fighting_style", "signature_move", "portrait_url"):
+            if col not in pcols:
+                c.execute(f"ALTER TABLE personas ADD COLUMN {col} TEXT DEFAULT ''")
 
 
 def init_db():
@@ -277,7 +285,8 @@ def style_profile(sid):
 # ---- personas ----
 
 PERSONA_FIELDS = ("name", "race", "faction", "role", "weapon", "element",
-                  "appearance", "personality", "backstory", "voice", "notes")
+                  "appearance", "personality", "backstory", "voice", "notes",
+                  "fighting_style", "signature_move", "portrait_url")
 
 
 def create_persona(data: dict):
@@ -328,6 +337,10 @@ def persona_block(p):
     lines = [f"PLAYER PERSONA: {p.get('name','(unnamed)')}",
              f"Race: {p.get('race','')} | Faction: {p.get('faction','')} | Role: {p.get('role','')}",
              f"Weapon: {p.get('weapon','')} | Element: {p.get('element','')}"]
+    if p.get("fighting_style"):
+        lines.append(f"Fighting style: {p['fighting_style']} — honor it in combat narration and choices.")
+    if p.get("signature_move"):
+        lines.append(f"Signature move: {p['signature_move']} — let it land when fictionally earned, never on demand.")
     for k in ("appearance", "personality", "backstory", "voice", "notes"):
         if p.get(k):
             lines.append(f"{k.capitalize()}: {p[k]}")

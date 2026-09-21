@@ -1,5 +1,6 @@
 let sid = null;
 let sessions = [];
+let allPersonas = [];
 let busy = false;
 const chat = document.getElementById('chat');
 const list = document.getElementById('chatlist');
@@ -316,6 +317,7 @@ function splash() {
 
 async function loadPersonas(selected = '') {
   const r = await fetch('/api/personas').then(r => r.json());
+  allPersonas = r.personas || [];
   personaSel.innerHTML = '<option value="">— none —</option>';
   for (const p of r.personas) {
     const o = document.createElement('option');
@@ -386,6 +388,12 @@ function renderMeta(s) {
   }
   const p = personaSel.options[personaSel.selectedIndex];
   if (personaSel.value && p) {
+    const dossier = (allPersonas.find(x => x.id === personaSel.value) || {});
+    if (dossier.portrait_url) {
+      const img = document.createElement('img');
+      img.className = 'thumb'; img.src = dossier.portrait_url; img.alt = '';
+      meta.appendChild(img);
+    }
     const c = document.createElement('span'); c.className = 'chip'; c.textContent = '◈ ' + p.textContent.split(' · ')[0];
     meta.appendChild(c);
   }

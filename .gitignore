@@ -10,6 +10,9 @@ venv/
 *.sqlite
 *.sqlite-journal
 
+# User uploads - NEVER commit
+frontend/portraits/
+
 # OS
 .DS_Store
 Thumbs.db

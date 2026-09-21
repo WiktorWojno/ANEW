@@ -1,5 +1,5 @@
 let editing = null;
-const F = ['name','race','faction','role','weapon','appearance','personality','backstory','voice','notes'];
+const F = ['name','race','faction','role','weapon','appearance','personality','fighting_style','signature_move','backstory','voice','notes','portrait_url'];
 const val = k => document.getElementById('f_' + k).value.trim();
 const set = (k, v) => document.getElementById('f_' + k).value = v || '';
 const elVal = () => (document.querySelector('input[name=el]:checked') || {}).value || '';
@@ -22,6 +22,11 @@ function updatePreview() {
   const bits = [val('race'), val('role'), val('faction')].filter(Boolean).join(' · ');
   const el = elVal();
   p.innerHTML = '';
+  if (val('portrait_url')) {
+    const img = document.createElement('img');
+    img.className = 'portrait'; img.src = val('portrait_url'); img.alt = '';
+    p.appendChild(img);
+  }
   const b = document.createElement('b'); b.textContent = '◈ ' + name;
   p.appendChild(b);
   if (bits || el || val('weapon')) {
@@ -29,12 +34,36 @@ function updatePreview() {
     s.textContent = [bits, el, val('weapon')].filter(Boolean).join(' — ');
     p.appendChild(s);
   }
+  if (val('fighting_style')) {
+    const s = document.createElement('div'); s.textContent = 'Style: ' + val('fighting_style').slice(0, 140);
+    p.appendChild(s);
+  }
   if (val('personality')) {
     const s = document.createElement('div'); s.textContent = val('personality').slice(0, 140);
     p.appendChild(s);
   }
 }
-for (const k of F) document.getElementById('f_' + k).addEventListener('input', updatePreview);
+for (const k of F) {
+  const el = document.getElementById('f_' + k);
+  if (el) el.addEventListener('input', updatePreview);
+}
+document.getElementById('f_portrait_url').addEventListener('input', updatePreview);
+document.getElementById('f_file').addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  toast('Uploading portrait…');
+  const fd = new FormData();
+  fd.append('file', f);
+  try {
+    const r = await fetch('/api/portraits', {method: 'POST', body: fd}).then(r => r.json());
+    if (r.url) {
+      set('portrait_url', r.url);
+      updatePreview();
+      toast('Portrait attached — file the character to keep it.');
+    } else toast('Upload failed: ' + (r.error || 'unknown'));
+  } catch { toast('Upload failed — check uplink.'); }
+  e.target.value = '';
+});
 for (const r of document.querySelectorAll('input[name=el]')) r.addEventListener('change', updatePreview);
 
 async function load() {
@@ -51,6 +80,11 @@ async function load() {
   for (const p of r.personas) {
     const d = document.createElement('div');
     d.className = 'card' + (p.element ? ' el-' + p.element : '');
+    if (p.portrait_url) {
+      const img = document.createElement('img');
+      img.className = 'portrait'; img.src = p.portrait_url; img.alt = ''; img.loading = 'lazy';
+      d.appendChild(img);
+    }
     const h = document.createElement('h3'); h.textContent = '◈ ' + (p.name || '(unnamed)'); d.appendChild(h);
     const sub = document.createElement('div'); sub.className = 'sub';
     sub.textContent = [p.race, p.role, p.faction].filter(Boolean).join(' · ') || '—';
@@ -58,6 +92,10 @@ async function load() {
     if (p.element || p.weapon) {
       const e = document.createElement('p');
       e.textContent = [p.element, p.weapon].filter(Boolean).join(' · ');
+      d.appendChild(e);
+    }
+    if (p.fighting_style) {
+      const e = document.createElement('p'); e.textContent = 'Style: ' + p.fighting_style.slice(0, 150);
       d.appendChild(e);
     }
     for (const k of ['personality', 'backstory']) {

@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -223,6 +223,28 @@ async def personas_update(req: Request):
 def personas_delete(id: str):
     memory.delete_persona(id)
     return {"ok": True}
+
+
+PORTRAIT_DIR = ROOT / "frontend" / "portraits"
+PORTRAIT_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+PORTRAIT_MAX = 5 * 1024 * 1024
+
+
+@app.post("/api/portraits")
+async def portrait_upload(file: UploadFile = File(...)):
+    """Store an operative portrait, return its URL. Dossier save links it via portrait_url."""
+    import uuid as _uuid
+
+    ext = ("." + (file.filename or "").rsplit(".", 1)[-1].lower()) if "." in (file.filename or "") else ""
+    if ext not in PORTRAIT_EXTS:
+        return JSONResponse({"error": "image type not allowed (png/jpg/webp/gif)"}, status_code=400)
+    data = await file.read()
+    if not data or len(data) > PORTRAIT_MAX:
+        return JSONResponse({"error": "empty or over 5MB"}, status_code=400)
+    PORTRAIT_DIR.mkdir(parents=True, exist_ok=True)
+    name = f"p_{_uuid.uuid4().hex[:12]}{ext}"
+    (PORTRAIT_DIR / name).write_bytes(data)
+    return {"url": f"/static/portraits/{name}"}
 
 
 @app.get("/api/state")
