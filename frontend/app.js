@@ -69,6 +69,11 @@ document.getElementById('deploytoggle').onclick = () =>
 document.getElementById('sidebartoggle').onclick = () =>
   document.body.classList.toggle('sb-hidden');
 
+document.getElementById('lockbtn').onclick = async () => {
+  await fetch('/api/logout', {method: 'POST'});
+  location.href = '/';
+};
+
 const fmtTime = (ts) => ts ? new Date(ts * 1000).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '';
 
 /** Minimal markdown: escape HTML, then ***bold+italic***, **bold**, *italic*. */

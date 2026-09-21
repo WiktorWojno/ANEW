@@ -1,10 +1,13 @@
 """SQLite memory for ANEW sessions + personas. Local only, never commit .db."""
+import os
 import sqlite3
 import time
 import uuid
 from pathlib import Path
 
-DB_PATH = Path(__file__).resolve().parent.parent / "anew.db"
+# Railway: point ANEW_DATA_DIR at a mounted volume (e.g. /data) so chats survive restarts.
+DATA_DIR = Path(os.getenv("ANEW_DATA_DIR", str(Path(__file__).resolve().parent.parent)))
+DB_PATH = DATA_DIR / "anew.db"
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
@@ -83,6 +86,7 @@ def _migrate():
 
 
 def init_db():
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
     with _conn() as c:
         c.executescript(SCHEMA)
     _migrate()

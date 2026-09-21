@@ -15,6 +15,15 @@ from .literouter import MODEL_CHEAP, MODEL_MAIN, chat_once, chat_stream
 load_dotenv()
 ROOT = Path(__file__).resolve().parent.parent
 
+PORTRAIT_DIR = ROOT / "frontend" / "portraits"
+# Railway: ANEW_DATA_DIR moves uploads onto the persistent volume; served at /media/.
+if os.getenv("ANEW_DATA_DIR"):
+    PORTRAIT_DIR = Path(os.getenv("ANEW_DATA_DIR")) / "portraits"
+PORTRAIT_DIR.mkdir(parents=True, exist_ok=True)
+PORTRAIT_URL_PREFIX = "/media" if os.getenv("ANEW_DATA_DIR") else "/static/portraits"
+PORTRAIT_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+PORTRAIT_MAX = 5 * 1024 * 1024
+
 def _read(p: Path, fallback=""):
     try:
         return p.read_text(encoding="utf-8")
@@ -129,6 +138,51 @@ STARTER_TEXT = {
 
 app = FastAPI(title="ANEW Endfield RP")
 app.mount("/static", StaticFiles(directory=str(ROOT / "frontend")), name="static")
+if os.getenv("ANEW_DATA_DIR"):
+    # Volume-backed portraits (Railway): served at /media/<name>.
+    app.mount("/media", StaticFiles(directory=str(PORTRAIT_DIR)), name="media")
+
+
+ANEW_PASSWORD = os.getenv("ANEW_PASSWORD", "")
+COOKIE_NAME = "anew_key"
+_GATE_OPEN = ("/api/login", "/api/logout", "/api/config")
+
+
+@app.middleware("http")
+async def gate(request: Request, call_next):
+    """Shared-secret gate. Set ANEW_PASSWORD to lock the whole site (Railway)."""
+    if ANEW_PASSWORD:
+        path = request.url.path
+        if not (path.startswith("/static/") or path.startswith("/media/") or path in _GATE_OPEN):
+            key = request.headers.get("x-anew-key", "") or request.cookies.get(COOKIE_NAME, "")
+            if key != ANEW_PASSWORD:
+                if path.startswith("/api/") or path in ("/openapi.json", "/docs", "/redoc"):
+                    return JSONResponse({"error": "locked"}, status_code=401)
+                return FileResponse(str(ROOT / "frontend" / "lock.html"))
+    return await call_next(request)
+
+
+@app.post("/api/login")
+async def login(req: Request):
+    if not ANEW_PASSWORD:
+        return {"ok": True}
+    try:
+        b = await req.json()
+    except Exception:
+        b = {}
+    if b.get("password", "") != ANEW_PASSWORD:
+        return JSONResponse({"error": "wrong password"}, status_code=401)
+    resp = JSONResponse({"ok": True})
+    resp.set_cookie(COOKIE_NAME, ANEW_PASSWORD, httponly=True, samesite="lax",
+                    max_age=90 * 24 * 3600, path="/")
+    return resp
+
+
+@app.post("/api/logout")
+async def logout():
+    resp = JSONResponse({"ok": True})
+    resp.delete_cookie(COOKIE_NAME, path="/")
+    return resp
 
 
 @app.get("/")
@@ -283,11 +337,6 @@ def personas_delete(id: str):
     return {"ok": True}
 
 
-PORTRAIT_DIR = ROOT / "frontend" / "portraits"
-PORTRAIT_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
-PORTRAIT_MAX = 5 * 1024 * 1024
-
-
 @app.post("/api/portraits")
 async def portrait_upload(file: UploadFile = File(...)):
     """Store an operative portrait, return its URL. Dossier save links it via portrait_url."""
@@ -299,10 +348,9 @@ async def portrait_upload(file: UploadFile = File(...)):
     data = await file.read()
     if not data or len(data) > PORTRAIT_MAX:
         return JSONResponse({"error": "empty or over 5MB"}, status_code=400)
-    PORTRAIT_DIR.mkdir(parents=True, exist_ok=True)
     name = f"p_{_uuid.uuid4().hex[:12]}{ext}"
     (PORTRAIT_DIR / name).write_bytes(data)
-    return {"url": f"/static/portraits/{name}"}
+    return {"url": f"{PORTRAIT_URL_PREFIX}/{name}"}
 
 
 @app.get("/api/state")
