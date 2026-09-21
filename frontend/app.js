@@ -587,6 +587,11 @@ document.getElementById('btnExport').onclick = () => {
   window.open('/api/export?session_id=' + sid, '_blank');
 };
 
+document.getElementById('exportall').onclick = () => {
+  window.open('/api/export-all', '_blank');
+  toast('Archive downloading.');
+};
+
 setTools(false);
 syncChoicesBtn();
 syncModeUI();

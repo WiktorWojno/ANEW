@@ -103,6 +103,26 @@ def personas_page():
     return FileResponse(str(ROOT / "frontend" / "personas.html"))
 
 
+@app.get("/api/export-all")
+def export_all():
+    """Download every deployment + dossier as one JSON archive."""
+    from fastapi.responses import PlainTextResponse
+
+    sessions = []
+    for s in memory.list_sessions(limit=500):
+        sessions.append({
+            "session": {k: s[k] for k in s if k not in ("preview",)},
+            "track": memory.get_state(s["id"]),
+            "history": memory.last_messages(s["id"], 2000),
+        })
+    archive = json.dumps({"build": "roadmap-v6", "personas": memory.list_personas(),
+                          "sessions": sessions}, ensure_ascii=False)
+    return PlainTextResponse(
+        archive, media_type="application/json",
+        headers={"Content-Disposition": "attachment; filename=anew-archive.json"},
+    )
+
+
 @app.get("/lore")
 def lore_page():
     return FileResponse(str(ROOT / "frontend" / "lore.html"))
@@ -156,7 +176,7 @@ def lore_doc(doc_id: str):
 
 @app.get("/api/config")
 def config():
-    return {"model_main": MODEL_MAIN, "model_cheap": MODEL_CHEAP, "build": "lore-v5"}
+    return {"model_main": MODEL_MAIN, "model_cheap": MODEL_CHEAP, "build": "roadmap-v6"}
 
 
 @app.post("/api/new-game")
