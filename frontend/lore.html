@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ANEW — Talos-II Archive</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpolygon points='8,0 24,0 32,16 24,32 8,32 0,16' fill='%23f2a33c'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="mark">E</div>
+    <h1>ANEW<span>Talos-II archive</span></h1>
+  </div>
+  <nav><a href="/">← Field link</a> <a href="/personas">◈ Characters</a></nav>
+</header>
+<main class="page">
+  <p class="lede">Strict-canon reference for the table. Tiers: <span class="tier-conf">Confirmed</span> (Nexus/official),
+  <span class="tier-comm">Community</span> (labeled consensus), <span class="tier-unk">Unknown</span> (hooks only).
+  Your dossiers always override canon for your own character.</p>
+  <input id="loresearch" placeholder="▸ search the archive… (e.g. Ankhorfall, Reconveners, Valley)" autocomplete="off" />
+  <section id="lorecards" class="cards"></section>
+  <section id="lorereader" hidden>
+    <div class="panel-head" id="loretitle"></div>
+    <div id="lorebody"></div>
+  </section>
+</main>
+<div id="toast"></div>
+<script src="/static/lore.js"></script>
+</body>
+</html>

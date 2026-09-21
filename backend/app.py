@@ -103,6 +103,57 @@ def personas_page():
     return FileResponse(str(ROOT / "frontend" / "personas.html"))
 
 
+@app.get("/lore")
+def lore_page():
+    return FileResponse(str(ROOT / "frontend" / "lore.html"))
+
+
+def _lore_docs():
+    docs = []
+    for p in sorted((ROOT / "lore").glob("*.md")):
+        text = _read(p)
+        title = p.stem
+        sections = []
+        for ln in text.split("\n"):
+            if ln.startswith("# "):
+                title = ln[2:].strip()
+            elif ln.startswith("## "):
+                sections.append(ln[3:].strip())
+        docs.append({"id": p.name, "title": title, "sections": sections})
+    return docs
+
+
+@app.get("/api/lore")
+def lore_list():
+    return {"docs": [{k: d[k] for k in ("id", "title", "sections")} for d in _lore_docs()]}
+
+
+@app.get("/api/lore/search")
+def lore_search(q: str = ""):
+    q = q.strip().lower()
+    if not q:
+        return {"matches": []}
+    out = []
+    for d in _lore_docs():
+        text = _read(ROOT / "lore" / d["id"])
+        idx = text.lower().find(q)
+        if idx >= 0:
+            start = max(0, idx - 80)
+            out.append({"id": d["id"], "title": d["title"],
+                        "snippet": text[start:idx + 200].replace("\n", " ").strip()})
+    return {"matches": out}
+
+
+@app.get("/api/lore/{doc_id}")
+def lore_doc(doc_id: str):
+    allowed = {d["id"] for d in _lore_docs()}
+    if doc_id not in allowed:
+        return JSONResponse({"error": "no doc"}, status_code=404)
+    text = _read(ROOT / "lore" / doc_id)
+    title = next((d["title"] for d in _lore_docs() if d["id"] == doc_id), doc_id)
+    return {"id": doc_id, "title": title, "content": text}
+
+
 @app.get("/api/config")
 def config():
     return {"model_main": MODEL_MAIN, "model_cheap": MODEL_CHEAP, "build": "lore-v5"}
