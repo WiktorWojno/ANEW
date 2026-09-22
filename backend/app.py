@@ -1,4 +1,5 @@
 """ANEW FastAPI: Endfield RP web + SQLite + LiteRouter hybrid."""
+import asyncio
 import json
 import os
 import re
@@ -574,7 +575,19 @@ def _streamer(sid, msgs):
     async def gen():
         buf = []
         out_cap = 800 if FREE_MAIN else 1000
-        async for ch in chat_stream(MODEL_MAIN, msgs, max_tokens=out_cap, temperature=0.9):
+        agen = chat_stream(MODEL_MAIN, msgs, max_tokens=out_cap, temperature=0.9).__aiter__()
+        while True:
+            try:
+                ch = await asyncio.wait_for(agen.__anext__(), timeout=15)
+            except asyncio.TimeoutError:
+                # No token yet (queued / slow model). Send an SSE comment line so
+                # mobile carriers / cellular NATs don't kill the idle connection
+                # before the first byte arrives. Comment lines are ignored by
+                # the client's SSE parser (it only reads "data: " lines).
+                yield ": keepalive\n\n"
+                continue
+            except StopAsyncIteration:
+                break
             buf.append(ch)
             yield f"data: {json.dumps({'delta': ch})}\n\n"
         full = "".join(buf)
@@ -589,7 +602,17 @@ def _streamer(sid, msgs):
             raw = (ch_raw + ("\n" + state_raw if state_raw else "")).strip()
         yield f"data: {json.dumps({'done': True, 'choices': choices, 'raw': raw})}\n\n"
 
-    return StreamingResponse(gen(), media_type="text/event-stream")
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={
+            # Belt-and-suspenders against any reverse proxy (Railway's edge,
+            # nginx, etc.) buffering the whole response before forwarding it.
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 CONTINUE_NUDGE = (
