@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0d0f12" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>ANEW — Restricted uplink</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpolygon points='8,0 24,0 32,16 24,32 8,32 0,16' fill='%23f2a33c'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="/static/style.css" />
+<style>
+.lockwrap{min-height:calc(100dvh - 55px);display:grid;place-items:center;padding:20px}
+.lockbox{width:min(380px,92vw)}
+.lockbox input{margin:10px 0}
+.lockbox button{width:100%}
+#lockerr{color:var(--red);font-size:12px;min-height:18px;margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="mark">E</div>
+    <h1>ANEW<span>Restricted uplink</span></h1>
+  </div>
+</header>
+<div class="lockwrap">
+  <div id="setup" class="lockbox">
+    <div class="panel-head">Authentication required</div>
+    <p class="lede">This field link is private. Enter the shared password to continue to Talos-II.</p>
+    <input id="pw" type="password" placeholder="Shared password" autocomplete="current-password" />
+    <button id="go">Unlock uplink</button>
+    <div id="lockerr"></div>
+    <div class="hazard"></div>
+  </div>
+</div>
+<script>
+const pw = document.getElementById('pw');
+const err = document.getElementById('lockerr');
+async function unlock() {
+  err.textContent = '';
+  const r = await fetch('/api/login', {method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({password: pw.value})});
+  if (r.ok) location.replace(location.pathname);
+  else err.textContent = 'Wrong password. The frontier does not yield.';
+}
+document.getElementById('go').onclick = unlock;
+pw.onkeydown = (e) => { if (e.key === 'Enter') unlock(); };
+pw.focus();
+</script>
+</body>
+</html>
