@@ -49,8 +49,16 @@ def _release(model: str):
 
 async def chat_stream(model: str, messages: list, max_tokens: int = 1000, temperature: float = 0.9):
     """Async generator yielding text chunks. Respects 1-concurrent + free cooldown. Retries once on 429/403."""
-    client = get_client()
-    await _acquire(model)
+    try:
+        client = get_client()
+        await _acquire(model)
+    except Exception as e:
+        # Getting the client or waiting for the concurrency slot failed
+        # (missing/invalid API key, etc). Yield it instead of raising, so the
+        # stream never closes with zero bytes — the frontend can show the
+        # real reason instead of a generic "[No signal]".
+        yield f"\n[LiteRouter error: {str(e)[:300]}]"
+        return
     try:
         for attempt in range(2):
             try:
