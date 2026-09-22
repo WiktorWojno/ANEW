@@ -64,12 +64,16 @@ function syncDossierRow() {
 
 for (const r of document.querySelectorAll('input[name=mode]')) r.addEventListener('change', syncModeUI);
 
+// Phones: start with the deployments list tucked away so the chat is what you see first.
+if (window.matchMedia('(max-width:900px)').matches) document.body.classList.add('sb-hidden');
+
 document.getElementById('deploytoggle').onclick = () =>
   document.body.classList.toggle('deploy-collapsed');
 document.getElementById('sidebartoggle').onclick = () =>
   document.body.classList.toggle('sb-hidden');
 
 document.getElementById('lockbtn').onclick = async () => {
+  if (!confirm('Lock the uplink? You will need the password again.')) return;
   await fetch('/api/logout', {method: 'POST'});
   location.href = '/';
 };

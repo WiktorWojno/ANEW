@@ -10,7 +10,10 @@ from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import memory
-from .literouter import MODEL_CHEAP, MODEL_MAIN, chat_once, chat_stream
+from .literouter import MODEL_CHEAP, MODEL_MAIN, chat_once, chat_stream, is_free_model
+
+# :free models cap input at ~5,000 tokens, so the prompt shrinks to fit (see build_messages).
+FREE_MAIN = is_free_model(MODEL_MAIN)
 
 load_dotenv()
 ROOT = Path(__file__).resolve().parent.parent
@@ -108,18 +111,18 @@ STARTER_LORE = {
 FACTIONS_REF = _read(LORE_DIR / "factions.md")
 
 
-def lore_for(starter):
+def lore_for(starter, budget=LORE_BUDGET, sec_cap=1500):
     """Assemble the tier-labeled lore block for a deployment. See lore/canon-policy.md."""
     parts = ["[Factions]\n" + FACTIONS_REF.strip()]
     for filename, heading in ALWAYS_LORE:
-        sec = _section(filename, heading)
+        sec = _section(filename, heading, sec_cap)
         if sec:
             parts.append(f"[{filename} — {heading}]\n{sec}")
     for filename, heading in STARTER_LORE.get(starter, STARTER_LORE["B"]):
-        sec = _section(filename, heading)
+        sec = _section(filename, heading, sec_cap)
         if sec:
             parts.append(f"[{filename} — {heading}]\n{sec}")
-    return "\n\n".join(parts)[:LORE_BUDGET]
+    return "\n\n".join(parts)[:budget]
 
 STARTER_TEXT = {
     "A": "Cold Wake: the player wakes in OMV Dijiang, Perlica briefs, Valley IV alarm sounds.",
@@ -148,6 +151,9 @@ COOKIE_NAME = "anew_key"
 _GATE_OPEN = ("/api/login", "/api/logout", "/api/config")
 
 
+NO_STORE = {"Cache-Control": "no-store"}
+
+
 @app.middleware("http")
 async def gate(request: Request, call_next):
     """Shared-secret gate. Set ANEW_PASSWORD to lock the whole site (Railway)."""
@@ -157,9 +163,15 @@ async def gate(request: Request, call_next):
             key = request.headers.get("x-anew-key", "") or request.cookies.get(COOKIE_NAME, "")
             if key != ANEW_PASSWORD:
                 if path.startswith("/api/") or path in ("/openapi.json", "/docs", "/redoc"):
-                    return JSONResponse({"error": "locked"}, status_code=401)
-                return FileResponse(str(ROOT / "frontend" / "lock.html"))
-    return await call_next(request)
+                    return JSONResponse({"error": "locked"}, status_code=401, headers=NO_STORE)
+                # no-store: browsers must never cache the lock page under /, /personas or
+                # /lore, or it keeps showing after a successful login.
+                return FileResponse(str(ROOT / "frontend" / "lock.html"), headers=NO_STORE)
+    resp = await call_next(request)
+    # Revalidate app pages and static assets so a redeploy reaches phones immediately.
+    if not request.url.path.startswith(("/api/", "/media/")):
+        resp.headers.setdefault("Cache-Control", "no-cache")
+    return resp
 
 
 @app.post("/api/login")
@@ -268,7 +280,7 @@ def lore_doc(doc_id: str):
 
 @app.get("/api/config")
 def config():
-    return {"model_main": MODEL_MAIN, "model_cheap": MODEL_CHEAP, "build": "roadmap-v6"}
+    return {"model_main": MODEL_MAIN, "model_cheap": MODEL_CHEAP, "build": "free-v7", "free_main": FREE_MAIN}
 
 
 @app.post("/api/new-game")
@@ -382,9 +394,14 @@ def build_messages(s, history, user_text):
         if p:
             persona_txt = "\n\n--- PERSONA ---\n" + memory.persona_block(p)
     style_txt = s.get("style") or memory.STYLE_UNKNOWN
+    # Free-tier main model: fit the 5k-token input cap (short lore, recent history only).
+    lore_txt = lore_for(s.get("starter", "B"),
+                        budget=2500 if FREE_MAIN else LORE_BUDGET,
+                        sec_cap=700 if FREE_MAIN else 1500)
+    hist_n, hist_cap = (4, 800) if FREE_MAIN else (10, 3000)
     system = (
         f"{GM}\n\n--- MODE [{s.get('mode')}] ---\n{mode_txt}\n\n"
-        f"--- LORE (tier-labeled canon; see lore/canon-policy.md) ---\n{lore_for(s.get('starter', 'B'))}\n\nTone: {s.get('tone')}. "
+        f"--- LORE (tier-labeled canon; see lore/canon-policy.md) ---\n{lore_txt}\n\nTone: {s.get('tone')}. "
         f"Character: {s.get('character','')}. Starter: {starter}\n"
         f"{persona_txt}\n"
         f"--- PLAYER STYLE ---\n{style_txt}\n"
@@ -403,8 +420,8 @@ def build_messages(s, history, user_text):
         "choices live ONLY in the block. The UI renders **bold** and *italic*, so use them."
     )
     msgs = [{"role": "system", "content": system}]
-    for m in history[-10:]:
-        msgs.append({"role": m["role"], "content": m["content"][-3000:]})
+    for m in history[-hist_n:]:
+        msgs.append({"role": m["role"], "content": m["content"][-hist_cap:]})
     msgs.append({"role": "user", "content": user_text})
     return msgs
 
@@ -556,7 +573,8 @@ def extract_choices(full):
 def _streamer(sid, msgs):
     async def gen():
         buf = []
-        async for ch in chat_stream(MODEL_MAIN, msgs, max_tokens=1000, temperature=0.9):
+        out_cap = 800 if FREE_MAIN else 1000
+        async for ch in chat_stream(MODEL_MAIN, msgs, max_tokens=out_cap, temperature=0.9):
             buf.append(ch)
             yield f"data: {json.dumps({'delta': ch})}\n\n"
         full = "".join(buf)
