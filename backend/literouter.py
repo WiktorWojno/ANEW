@@ -4,7 +4,13 @@ import os
 import time
 
 from dotenv import load_dotenv
-from openai import AsyncOpenAI
+from openai import (
+    AsyncOpenAI,
+    APIConnectionError,
+    APITimeoutError,
+    InternalServerError,
+    RateLimitError,
+)
 
 load_dotenv()
 
@@ -15,6 +21,15 @@ MODEL_CHEAP = os.getenv("MODEL_CHEAP", "qwen3.8-27b:free")
 _queue: asyncio.Queue = asyncio.Queue(maxsize=1)
 _queue.put_nowait(True)
 _last_free = 0.0
+
+MAX_ATTEMPTS = 4            # 1 initial try + up to 3 retries
+RETRY_DELAYS = [2, 5, 10]   # seconds before retry 1, 2, 3 (backs off each time)
+
+# Worth retrying: rate limits, dropped/failed connections, and the
+# provider's own 5xx failures — these are usually transient. A bad API key,
+# insufficient credits, or a malformed request will fail the same way every
+# time, so those are surfaced immediately instead of wasting retries.
+RETRYABLE_EXCEPTIONS = (RateLimitError, APIConnectionError, APITimeoutError, InternalServerError)
 
 
 def is_free_model(model: str) -> bool:
@@ -47,20 +62,29 @@ def _release(model: str):
         pass
 
 
+def _is_retryable(e: Exception) -> bool:
+    if isinstance(e, RETRYABLE_EXCEPTIONS):
+        return True
+    msg = str(e).lower()
+    return "429" in msg or "403" in msg or "rate" in msg
+
+
 async def chat_stream(model: str, messages: list, max_tokens: int = 1000, temperature: float = 0.9):
-    """Async generator yielding text chunks. Respects 1-concurrent + free cooldown. Retries once on 429/403."""
+    """Async generator yielding text chunks. Respects 1-concurrent + free cooldown.
+    Retries transient failures (rate limits, connection drops, provider 5xxs)
+    up to MAX_ATTEMPTS times with backoff before giving up."""
     try:
         client = get_client()
         await _acquire(model)
     except Exception as e:
         # Getting the client or waiting for the concurrency slot failed
-        # (missing/invalid API key, etc). Yield it instead of raising, so the
-        # stream never closes with zero bytes — the frontend can show the
-        # real reason instead of a generic "[No signal]".
+        # (missing/invalid API key, etc) — not transient, retrying won't help.
         yield f"\n[LiteRouter error: {str(e)[:300]}]"
         return
+
     try:
-        for attempt in range(2):
+        for attempt in range(MAX_ATTEMPTS):
+            got_any = False
             try:
                 stream = await client.chat.completions.create(
                     model=model, messages=messages,
@@ -69,15 +93,19 @@ async def chat_stream(model: str, messages: list, max_tokens: int = 1000, temper
                 async for part in stream:
                     d = part.choices[0].delta.content if part.choices else None
                     if d:
+                        got_any = True
                         yield d
-                return
+                return  # finished cleanly
             except Exception as e:
-                msg = str(e)
-                if attempt == 0 and ("429" in msg or "403" in msg or "rate" in msg.lower()):
-                    await asyncio.sleep(3)
-                    continue
-                yield f"\n[LiteRouter error: {msg[:300]}]"
-                return
+                is_last_attempt = attempt == MAX_ATTEMPTS - 1
+                # Never retry once real content already streamed this attempt —
+                # re-calling create() would restart the reply and duplicate/
+                # garble what the user already saw.
+                if got_any or is_last_attempt or not _is_retryable(e):
+                    yield f"\n[LiteRouter error: {str(e)[:300]}]"
+                    return
+                await asyncio.sleep(RETRY_DELAYS[attempt])
+                continue
     finally:
         _release(model)
 
