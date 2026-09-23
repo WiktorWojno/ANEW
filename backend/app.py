@@ -574,7 +574,11 @@ def extract_choices(full):
 def _streamer(sid, msgs):
     async def gen():
         buf = []
-        out_cap = 800 if FREE_MAIN else 1000
+        # Bumped up from 800/1000: the system prompt only asks for 150-300
+        # words + two short tag blocks (comfortably under the old cap), but
+        # finish_reason=length has been observed with zero visible content —
+        # extra headroom in case something is consuming budget invisibly.
+        out_cap = 1200 if FREE_MAIN else 2000
         agen = chat_stream(MODEL_MAIN, msgs, max_tokens=out_cap, temperature=0.9).__aiter__()
         while True:
             # One task per item, reused across the wait below — asyncio.wait()

@@ -90,6 +90,13 @@ async def chat_stream(model: str, messages: list, max_tokens: int = 1000, temper
                 stream = await client.chat.completions.create(
                     model=model, messages=messages,
                     max_tokens=max_tokens, temperature=temperature, stream=True,
+                    # Some LiteRouter-proxied backends apparently spend the
+                    # completion budget on hidden reasoning even for models
+                    # that don't normally support it (that's the leading
+                    # theory for finish_reason=length with zero visible
+                    # content). extra_body passes vendor fields the openai
+                    # SDK doesn't know about; harmless no-op if unsupported.
+                    extra_body={"reasoning": {"enabled": False, "exclude": True}},
                 )
                 async for part in stream:
                     choice = part.choices[0] if part.choices else None
