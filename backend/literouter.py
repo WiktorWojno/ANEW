@@ -90,13 +90,20 @@ async def chat_stream(model: str, messages: list, max_tokens: int = 1000, temper
                 stream = await client.chat.completions.create(
                     model=model, messages=messages,
                     max_tokens=max_tokens, temperature=temperature, stream=True,
-                    # Some LiteRouter-proxied backends apparently spend the
-                    # completion budget on hidden reasoning even for models
-                    # that don't normally support it (that's the leading
-                    # theory for finish_reason=length with zero visible
-                    # content). extra_body passes vendor fields the openai
-                    # SDK doesn't know about; harmless no-op if unsupported.
-                    extra_body={"reasoning": {"enabled": False, "exclude": True}},
+                    # Kimi K2.6 defaults to enable_thinking=true with a
+                    # thinking_budget of 32768 tokens on the providers that
+                    # serve it (Qwen/Alibaba-compatible endpoints) — that's
+                    # almost certainly what was eating the whole max_tokens
+                    # budget before any visible text, producing
+                    # finish_reason=length with zero content. Sending both
+                    # the OpenRouter-style and the Qwen-style off-switch so
+                    # it lands whichever way LiteRouter proxies this model;
+                    # an unrecognized field is a harmless no-op.
+                    extra_body={
+                        "reasoning": {"enabled": False, "exclude": True},
+                        "enable_thinking": False,
+                        "thinking_budget": 0,
+                    },
                 )
                 async for part in stream:
                     choice = part.choices[0] if part.choices else None
