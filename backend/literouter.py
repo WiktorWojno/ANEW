@@ -85,17 +85,35 @@ async def chat_stream(model: str, messages: list, max_tokens: int = 1000, temper
     try:
         for attempt in range(MAX_ATTEMPTS):
             got_any = False
+            finish_reason = None
             try:
                 stream = await client.chat.completions.create(
                     model=model, messages=messages,
                     max_tokens=max_tokens, temperature=temperature, stream=True,
                 )
                 async for part in stream:
-                    d = part.choices[0].delta.content if part.choices else None
+                    choice = part.choices[0] if part.choices else None
+                    if choice is None:
+                        continue
+                    d = choice.delta.content
                     if d:
                         got_any = True
                         yield d
-                return  # finished cleanly
+                    if choice.finish_reason:
+                        finish_reason = choice.finish_reason
+                if got_any:
+                    return  # finished cleanly with real content
+                # The call succeeded and the provider billed it, but nothing
+                # came back on .delta.content — e.g. a content-filter block,
+                # or max_tokens getting used up on hidden/reasoning tokens
+                # before any visible text. This isn't an exception, so the
+                # retry/error handling above never sees it; surface it
+                # explicitly instead of silently returning nothing.
+                yield (f"\n[LiteRouter error: provider returned no visible content "
+                       f"(finish_reason={finish_reason or 'unknown'}) — this call "
+                       f"still used credits. Check the model's content filter or "
+                       f"context-length limit rather than retrying blindly.]")
+                return
             except Exception as e:
                 is_last_attempt = attempt == MAX_ATTEMPTS - 1
                 # Never retry once real content already streamed this attempt —

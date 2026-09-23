@@ -577,15 +577,22 @@ def _streamer(sid, msgs):
         out_cap = 800 if FREE_MAIN else 1000
         agen = chat_stream(MODEL_MAIN, msgs, max_tokens=out_cap, temperature=0.9).__aiter__()
         while True:
+            # One task per item, reused across the wait below — asyncio.wait()
+            # with a timeout does NOT cancel it when the timeout elapses, it
+            # just returns control so we can send a keepalive and go back to
+            # waiting on the SAME task. (asyncio.wait_for, used previously,
+            # cancels the awaited call on timeout, which killed the retry
+            # logic mid-backoff and produced empty streams — that's the bug
+            # behind the "[No signal]" reports.)
+            task = asyncio.ensure_future(agen.__anext__())
+            while not task.done():
+                _, pending = await asyncio.wait({task}, timeout=15)
+                if pending:
+                    # Still working (queued / retrying / slow model) — ping so
+                    # mobile carriers / proxies don't kill the idle connection.
+                    yield ": keepalive\n\n"
             try:
-                ch = await asyncio.wait_for(agen.__anext__(), timeout=15)
-            except asyncio.TimeoutError:
-                # No token yet (queued / slow model). Send an SSE comment line so
-                # mobile carriers / cellular NATs don't kill the idle connection
-                # before the first byte arrives. Comment lines are ignored by
-                # the client's SSE parser (it only reads "data: " lines).
-                yield ": keepalive\n\n"
-                continue
+                ch = task.result()
             except StopAsyncIteration:
                 break
             buf.append(ch)
